@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN" data-runtime="static">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101d36">
+  <title>唐诗互文可视化</title>
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <nav class="site-nav wrap" aria-label="页面导航">
+    <a class="wordmark" href="#top"><span class="site-seal" aria-hidden="true">唐</span>唐诗互文可视化</a>
+    <div class="nav-links">
+      <a class="nav-create" href="#create">二创</a>
+      <a href="#relations">图谱</a>
+      <a href="#poems">原诗</a>
+    </div>
+  </nav>
+  <header id="top" class="masthead">
+    <div class="hero-copy">
+      <div class="hero-verses">
+        <blockquote>我寄愁心与明月<cite title="闻王昌龄左迁龙标遥有此寄">李白</cite></blockquote>
+        <div class="hero-moon" aria-hidden="true"></div>
+        <blockquote>国破山河在<cite title="春望">杜甫</cite></blockquote>
+      </div>
+      <h1>明月照山河<span>唐诗互文可视化</span></h1>
+      <p class="hero-poets">李白 × 杜甫 <span aria-hidden="true">/</span> 李白 × 孟浩然</p>
+      <a class="action" href="#create">开始二创 <span aria-hidden="true">↓</span></a>
+    </div>
+    <figure class="hero-art">
+      <img src="./cover.png" alt="唐风插画，两人在月下的江面上隔着船岸伸手相望" width="2172" height="724" fetchpriority="high">
+    </figure>
+  </header>
+  <main id="main" class="wrap">
+    <p id="startup" role="status">正在读取匹配数据…</p>
+    <div id="workspace" hidden>
+      <section id="create" class="section" aria-labelledby="create-title">
+        <div class="create-layout">
+          <aside class="create-context">
+            <h2 id="create-title">月下题笺</h2>
+            <label class="create-group">诗人组合
+              <select id="create-group"><option value="du">李白 · 杜甫</option><option value="meng">李白 · 孟浩然</option></select>
+            </label>
+            <div id="seed">从上方选取诗句素材。</div>
+            <div class="seed-actions">
+              <button id="next-pair" class="secondary-action" type="button" disabled>换一组诗句 ↻</button>
+              <a class="change-seed" href="#poems">读原诗 ↓</a>
+            </div>
+            <span id="api-status" class="status"></span>
+          </aside>
+          <form id="generate">
+            <div class="controls">
+              <label>创作方式 <select id="mode"><option value="text">历史题材短篇</option><option value="image">场景插图</option></select></label>
+              <label id="upload" hidden>参考图（可选） <input id="reference" type="file" accept="image/png,image/jpeg,image/webp"></label>
+            </div>
+            <label class="idea">创作灵感 <textarea id="idea" required maxlength="2000" rows="3" placeholder="如：让两位诗人隔着不同年代望见同一只白鹰，以旅人视角写一段短篇。"></textarea></label>
+            <div class="prompt-options" role="group" aria-label="灵感示例">
+              <button class="secondary-action" type="button" data-idea="让两位诗人在同一轮明月下隔水相望，把选中的诗句融入重逢场景。">月下相逢</button>
+              <button class="secondary-action" type="button" data-idea="以秋风中的茅屋为场景，借选中诗句的意象表现一夜风雨。">秋风过茅屋</button>
+              <button class="secondary-action" type="button" data-idea="以旅人视角描绘一次江上夜航，把两句诗的意象带入沿岸风景。">江上夜航</button>
+            </div>
+            <label id="passcode-field" hidden>二创口令 <input id="generation-passcode" type="password" autocomplete="off"></label>
+            <button id="submit" type="submit">落笔 · 生成二创</button>
+            <p id="generation-state" role="status" class="note"></p>
+            <div id="result"></div>
+          </form>
+        </div>
+      </section>
+      <section id="relations" class="section" aria-labelledby="relation-title">
+        <div class="section-head">
+          <h2 id="relation-title">作品之间的匹配</h2>
+        </div>
+        <div class="controls filter-bar">
+          <label>诗人组合
+            <select id="group"><option value="du">李白 · 杜甫</option><option value="meng">李白 · 孟浩然</option></select>
+          </label>
+          <label class="score-control">最低分数 <input id="threshold" type="range" min="7000" max="10000" step="1" value="7000"> <output id="cut" for="threshold">7000</output></label>
+          <label>热力图颜色 <select id="metric"><option value="max">最高分数</option><option value="count">匹配句对数</option></select></label>
+        </div>
+        <article class="heat-scene">
+          <div id="heat" role="region" aria-label="酒流热力图">
+            <img class="heat-art" src="./wine-scroll.webp" alt="同一轮明月下，李白在山崖倾酒，杜甫立在秋风中的茅屋前遥望" width="1086" height="1448">
+            <canvas id="heat-canvas" width="1086" height="1448" aria-hidden="true"></canvas>
+            <p id="heat-hover" hidden aria-hidden="true"></p>
+          </div>
+          <div class="heat-reading">
+            <div>
+              <h3>一川酒色</h3>
+              <div id="heat-scale"></div>
+            </div>
+            <div class="heat-selection">
+              <label class="heat-picker">选择作品对 <select id="heat-pair"></select></label>
+              <div id="heat-selected" aria-live="polite"></div>
+              <a id="heat-read-link" href="#poems">读这组原诗 ↓</a>
+            </div>
+          </div>
+        </article>
+        <div class="wind-section">
+          <article class="panel autumn-wind">
+            <h3 id="network-title">乘舟访草堂</h3>
+            <div class="chart boat-window" tabindex="0" role="region" aria-label="作品关系网络，可横向滚动">
+              <div class="boat-stage">
+                <div id="network"></div>
+              </div>
+            </div>
+          </article>
+          <article class="panel wind-distribution">
+            <h3>分数门槛与保留比例</h3>
+            <div id="retention" class="chart" tabindex="0" role="region" aria-label="分数门槛折线图，可横向滚动"></div>
+            <p id="retention-summary" class="note retention-summary"></p>
+          </article>
+        </div>
+        <article class="cluster-panel">
+          <div class="cluster-head">
+            <h3>月下分枝</h3>
+            <div id="cluster-count"></div>
+          </div>
+          <div id="cluster" class="chart"></div>
+        </article>
+        <div class="distribution wind-sheet" aria-labelledby="distribution-title">
+          <img class="box-backdrop" src="./autumn-wind.webp" alt="" width="1200" height="800">
+          <div class="section-head">
+            <h3 id="distribution-title">匹配分数箱线图</h3>
+          </div>
+          <div class="distribution-chart">
+            <div id="boxes" class="chart"></div>
+          </div>
+        </div>
+      </section>
+      <section id="poems" class="section" aria-labelledby="reading-title">
+        <div class="section-head">
+          <h2 id="reading-title">隔水读诗</h2>
+          <label>匹配句对 <select id="match" aria-label="选择匹配句对"></select></label>
+        </div>
+        <div id="reading" class="reading-grid" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
